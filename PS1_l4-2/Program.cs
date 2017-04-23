@@ -17,7 +17,8 @@ namespace PS1_l4_2
             String x = null;
             for(int i = 0; i < threadAmount; i++)
             {
-                t[i] = new Thread(() => AlphabetWriter(i));
+                int z = i;
+                t[i] = new Thread(() => AlphabetWriter(z));
             }
             while (x != "end")
             {
