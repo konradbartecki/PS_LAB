@@ -10,15 +10,15 @@ namespace PS1_l4_2
 {
     class Program
     {
-        private static readonly int threadAmount = 10;
-        private static Thread[] t = new Thread[threadAmount];
+        private static readonly int taskAmount = 10;
+        private static Task[] t = new Task[taskAmount];
         static void Main(string[] args)
         {
             String x = null;
-            for(int i = 0; i < threadAmount; i++)
+            for (int i = 0; i < taskAmount; i++)
             {
                 int z = i;
-                t[i] = new Thread(() => AlphabetWriter(z));
+                t[i] = new Task(() => AlphabetWriter(z));
             }
             while (x != "end")
             {
@@ -26,30 +26,31 @@ namespace PS1_l4_2
                 try
                 {
                     InterpretCommand(x);
+                    for (int i = 0; i < taskAmount; i++)
+                    {
+                        int z = i;
+                    }
                 }
-                catch(ThreadStateException e)
+                catch (ThreadStateException e)
                 {
                     Console.WriteLine("Thread is already running!");
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    if (x != "end")
-                    {
-                        Console.WriteLine("Invalid command");
-                    }
+                    Console.WriteLine("Invalid command");
                 }
             }
         }
-        static void AlphabetWriter(int number)
+        static async Task AlphabetWriter(int number)
         {
             for (char letter = 'A'; letter <= 'Z'; letter++)
             {
-                if(number+1 > 9)
+                if (number + 1 > 9)
                 {
                     number = -1;
                 }
-                Console.WriteLine("{0}{1}", letter, number+1);
-                System.Threading.Thread.Sleep(1000);
+                Console.WriteLine("{0}{1}", letter, number + 1);
+                await Task.Delay(1000);
             }
         }
         static void InterpretCommand(String command)
@@ -60,13 +61,13 @@ namespace PS1_l4_2
             {
                 if (thrNumber.Count == 1)
                 {
-                    SuspendThread(thrNumber[0]);
+                    AbortTask(thrNumber[0]);
                 }
                 else if (thrNumber.Count == 2)
                 {
                     for (int i = thrNumber[0]; i <= thrNumber[1]; i++)
                     {
-                        SuspendThread(i);
+                        AbortTask(i);
                     }
                 }
             }
@@ -74,14 +75,14 @@ namespace PS1_l4_2
             {
                 if (thrNumber.Count == 1)
                 {
-                    StartOrResumeThread(thrNumber[0]);
+                    StartTask(thrNumber[0]);
                 }
                 else if (thrNumber.Count == 2)
                 {
-                    
+
                     for (int i = thrNumber[0]; i <= thrNumber[1]; i++)
                     {
-                        StartOrResumeThread(i);
+                        StartTask(i);
                     }
                 }
             }
@@ -90,51 +91,28 @@ namespace PS1_l4_2
                 Console.WriteLine("Invalid command");
             }
         }
-        static void SuspendThread(int nr)
+        static void AbortTask(int nr)
         {
             nr--;
-            try
+            if(t[nr].Status != TaskStatus.Canceled)
             {
-                if (t[nr].ThreadState != ThreadState.Suspended)
-                {
-                    t[nr].Suspend();
-                }
-                else
-                {
-                    throw new ThreadStateException();
-                }
+                
             }
-            catch (IndexOutOfRangeException e)
+            else
             {
-                Console.WriteLine("Thread with number {0} does not exist", nr+1);
-            }
-            catch (ThreadStateException e)
-            {
-                Console.WriteLine("Thread {0} is not running, can't suspend", nr+1);
+                Console.WriteLine("Can't abort, already aborted or not yet started.");
             }
         }
-        static void StartOrResumeThread(int nr)
+        static void StartTask(int nr)
         {
             nr--;
-            try
+            if (t[nr].Status == TaskStatus.Created)
             {
-                if (t[nr].ThreadState == ThreadState.Suspended)
-                {
-                    t[nr].Resume();
-                }
-                else if(t[nr].ThreadState == ThreadState.Unstarted)
-                {
-                    t[nr] = new Thread(() => AlphabetWriter(nr));
-                    t[nr].Start();
-                }
-                else
-                {
-                    Console.WriteLine("Thread {0} is already running", nr+1);
-                }
+                t[nr].Start();
             }
-            catch(IndexOutOfRangeException e)
+            else
             {
-                Console.WriteLine("{0} is invalid number of a thread", nr+1);
+                Console.WriteLine("Can't start, already running or finished.");
             }
         }
         static List<int> RecognizeNumbers(String numbers)
