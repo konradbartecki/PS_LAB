@@ -1,62 +1,44 @@
-﻿using System;
+﻿using PS1_l4_5;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
-namespace PS1_l4_2
+namespace PS1_l4_5
 {
     class Program
     {
         private static readonly int taskAmount = 3;
-        private static CancellationTokenSource[] tokenSource = new CancellationTokenSource[taskAmount];
-        private static CancellationToken[] ct = new CancellationToken[taskAmount];
-        private static Task[] t = new Task[taskAmount];
+        private static List<AlphabetWriter> _alphabetWriters;
         static void Main(string[] args)
         {
-            String x = null;
+            _alphabetWriters = new List<AlphabetWriter>();
             for (int i = 0; i < taskAmount; i++)
+                _alphabetWriters.Add(new AlphabetWriter(i));
+            _alphabetWriters.ForEach(x => Task.Run(async () => await x.Write()));
+            ReadUserInputLoop();
+        }
+
+        static void ReadUserInputLoop()
+        {
+            string userInput = null;
+            do
             {
-                int z = i;
-                tokenSource[i] = new CancellationTokenSource();
-                ct[i] = tokenSource[i].Token;
-                t[i] = Task.Factory.StartNew(() => AlphabetWriter(i, ct[i]), ct[i]);
-            }
-            while (x != "end")
-            {
-                x = Console.ReadLine().ToLower();
+                userInput = Console.ReadLine().ToLower();
                 try
                 {
-                    InterpretCommand(x);
+                    InterpretCommand(userInput);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("Invalid command");
                 }
-            }
-        }
-        static async Task AlphabetWriter(int number, CancellationToken ct)
-        {
-            try
-            {
-                for (char letter = 'A'; letter <= 'Z'; letter++)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    if (number + 1 > 9)
-                    {
-                        number = -1;
-                    }
-                    Console.WriteLine("{0}{1}", letter, number + 1);
-                    await Task.Delay(1000);
-                }
-            }
-            catch (OperationCanceledException e)
-            {
-                t[number].Dispose();
-            }
+            } while (userInput != "end");
         }
         static void InterpretCommand(String command)
         {
-            String[] splittedCommand = command.Split(null);
+            string[] splittedCommand = command.Split(' ');
             List<int> thrNumber = RecognizeNumbers(splittedCommand[1]);
             if (splittedCommand[0] == "abort")
             {
@@ -77,23 +59,14 @@ namespace PS1_l4_2
                 Console.WriteLine("Invalid command");
             }
         }
-        static void AbortTask(int nr)
+        static void AbortTask(int number)
         {
-            try
+            var target = _alphabetWriters.FirstOrDefault(x => x.Number == number);
+            if (target == null)
+                Console.WriteLine("Unable to find {0} with number {1}", nameof(AlphabetWriter), number);
+            else
             {
-                if (t[nr - 1].IsCanceled || t[nr-1].IsFaulted)
-                {
-                    Console.WriteLine("Task {0} is already canceled", nr - 1);
-                }
-                else
-                {
-                    Console.WriteLine("Task {0} cancelled", nr);
-                    tokenSource[nr - 1].Cancel();
-                }
-            }
-            catch (IndexOutOfRangeException e)
-            {
-                Console.WriteLine("No task with number {0}", nr);
+                target.Cancel();
             }
         }
         static List<int> RecognizeNumbers(String numbers)
